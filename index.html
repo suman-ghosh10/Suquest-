@@ -1,0 +1,852 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>CloverQuest - Pixel Quiz</title>
+<style>
+:root{--line:#9b86c9;--ink:#6a5a9a;--pink:#fbd3e4;--blue:#bfe6f5;--lav:#d9c8f7;--mint:#c9f0e0}
+*{box-sizing:border-box;margin:0;padding:0;font-family:'Courier New',Courier,monospace;font-weight:bold}
+body{min-height:100vh;display:flex;justify-content:center;overflow-x:hidden;
+  background:conic-gradient(#ffd9ea 25%,#d8f3e6 0 50%,#d7e6ff 0 75%,#fff4c9 0) 0 0/110px 110px}
+.app{position:relative;z-index:1;width:100%;max-width:420px;min-height:100vh;
+  padding:14px 14px 50px;text-align:center;color:var(--ink)}
+.hidden{display:none}
+svg{display:block;margin:0 auto}
+
+/* background floating windows */
+.ghost{position:fixed;z-index:0;pointer-events:none;opacity:.6;font-size:11px;
+  background:rgba(255,255,255,.5);border:2px solid #b9a8e0;border-radius:8px;
+  padding:6px 10px;color:#8a78bd;text-align:left}
+.ghost small{display:block;text-align:right;font-size:10px}
+
+/* retro window */
+.win{background:rgba(255,255,255,.9);border:3px solid var(--line);border-radius:16px;
+  overflow:hidden;margin-top:16px;box-shadow:0 5px 0 rgba(155,134,201,.5)}
+.bar{display:flex;justify-content:space-between;align-items:center;
+  background:linear-gradient(90deg,#d9c8f7,#fbd3e4);padding:6px 10px;
+  font-size:13px;letter-spacing:1px;text-transform:uppercase}
+.x{cursor:pointer;background:#fff;border:2px solid var(--line);border-radius:6px;padding:0 7px}
+.body{padding:16px}
+.body h2{font-size:20px;margin-bottom:10px;letter-spacing:1px}
+.mascot{margin-bottom:6px}
+
+/* inputs */
+.in{width:100%;padding:12px;margin:6px 0;border:3px solid var(--line);
+  border-radius:14px;font-size:16px;background:#fff;color:var(--ink);outline:none}
+.in:focus{border-color:#ff9ec4}
+#authMsg{margin-top:10px;min-height:22px}
+
+/* pill buttons (friends-list style) */
+.pill{display:flex;align-items:center;gap:12px;width:100%;padding:10px 16px;
+  margin:12px 0;border:3px solid var(--line);border-radius:30px;font-size:16px;
+  letter-spacing:1px;color:var(--ink);cursor:pointer;transition:.12s;
+  box-shadow:0 4px 0 rgba(155,134,201,.55)}
+.pill .ic{width:34px;height:34px;display:flex;align-items:center;justify-content:center;flex-shrink:0}
+.pill .t{flex:1;text-align:left}
+.pill .h{font-size:20px}
+.pill:active{transform:translateY(4px);box-shadow:0 0 0 rgba(0,0,0,0)}
+.p1{background:var(--pink)}
+.p2{background:var(--blue)}
+.p3{background:var(--lav)}
+.opt .ic{font-size:16px;background:#fff;border:2px solid var(--line);border-radius:8px}
+.opt.right{background:#c8f5a8}
+.opt.wrong{background:#ffb3c6}
+
+/* featured card */
+.feat{position:relative;margin-top:30px;padding:18px 14px;border:4px solid var(--line);
+  border-radius:14px;background:linear-gradient(#c9f0e0,#e1d3fb);
+  box-shadow:0 5px 0 rgba(155,134,201,.5)}
+.feat .ttl{letter-spacing:1px;margin-bottom:6px}
+.corner{position:absolute}
+.c1{top:-20px;left:-14px}.c2{top:-20px;right:-14px}
+.c3{bottom:-20px;left:-14px}.c4{bottom:-20px;right:-14px}
+.cloud{position:absolute}
+.avatar{width:120px;height:104px;margin:6px auto;border:3px solid var(--line);
+  border-radius:8px;background:#e9dcff;display:flex;align-items:center;justify-content:center}
+.who{margin-top:6px;font-size:16px}
+.online{margin-top:8px;display:flex;align-items:center;justify-content:center;
+  gap:8px;background:rgba(255,255,255,.6);border-radius:22px;padding:8px}
+.online svg{margin:0}
+.head{margin-top:26px;font-size:22px;letter-spacing:3px}
+
+/* quiz bits */
+.timer{display:inline-block;border:2px solid var(--line);background:var(--mint);
+  border-radius:14px;padding:4px 12px}
+.small{font-size:14px;margin:8px 0}
+.dots{display:flex;flex-wrap:wrap;justify-content:center;gap:4px;margin:10px 0;
+  font-size:20px;color:#ff7fb0}
+.bubble{display:inline-block;background:#fff;border:2px solid var(--line);
+  border-radius:14px;padding:6px 12px;margin:8px 0}
+.row{display:flex;justify-content:space-between;align-items:center;
+  background:#fff;border:2px solid var(--line);border-radius:14px;
+  padding:8px 12px;margin:6px 0;text-align:left}
+.del{background:var(--pink);border:2px solid var(--line);border-radius:10px;
+  padding:4px 8px;cursor:pointer;color:var(--ink);font-size:12px}
+.toast{position:fixed;left:50%;bottom:30px;transform:translateX(-50%);z-index:9;
+  background:#fff;border:3px solid var(--line);border-radius:20px;
+  padding:10px 18px;display:none}
+</style>
+</head>
+<body>
+
+<div class="ghost" style="top:70px;left:6px">NEW<br>MESSAGE! ♡</div>
+<div class="ghost" style="top:44%;right:4px"><small>x o</small>♡ ♡ ♡</div>
+<div class="ghost" style="bottom:70px;left:4px"><small>x o</small>SETTINGS</div>
+
+<div class="app">
+
+  <!-- LOGIN -->
+  <div id="auth" class="screen">
+    <div class="win">
+      <div class="bar"><span>♡ login.exe</span><b class="x">x</b></div>
+      <div class="body">
+        <div class="mascot" data-c="cat" data-s="84"></div>
+        <h2>WELCOME!</h2>
+        <input class="in" id="user" placeholder="Username">
+        <input class="in" id="pass" type="password" placeholder="Password"
+               onkeydown="if(event.key==='Enter'){login()}">
+        <button class="pill p1" onclick="login()"><span class="ic" data-c="cat" data-s="32"></span><span class="t">LOGIN</span><span class="h">♡</span></button>
+        <button class="pill p2" onclick="register()"><span class="ic" data-c="bunny" data-s="32"></span><span class="t">REGISTER</span><span class="h">♡</span></button>
+        <div id="authMsg"></div>
+      </div>
+    </div>
+  </div>
+
+  <!-- HOME -->
+  <div id="home" class="screen hidden">
+    <div class="feat">
+      <span class="corner c1" data-c="bunny" data-s="42"></span>
+      <span class="corner c2" data-c="bear" data-s="42"></span>
+      <span class="corner c3" data-c="chick" data-s="42"></span>
+      <span class="corner c4" data-c="cat" data-s="42"></span>
+      <span class="cloud" style="top:34px;left:6px" data-c="cloud" data-s="46"></span>
+      <span class="cloud" style="top:50px;right:6px" data-c="cloud" data-s="46"></span>
+      <div class="ttl">FEATURED PLAYER</div>
+      <div class="avatar" data-c="cool" data-s="92"></div>
+      <div class="who" id="hName"></div>
+      <div class="online">
+        <span data-c="heart" data-s="22"></span> ONLINE &nbsp;
+        <span data-c="star" data-s="22"></span> <span id="stars">0</span>
+      </div>
+    </div>
+
+    <div class="head">MENU</div>
+
+    <button class="pill p1" onclick="go('Start')"><span class="ic" data-c="cat" data-s="32"></span><span class="t">START QUIZ</span><span class="h">♡</span></button>
+    <button class="pill p2" onclick="go('Learn')"><span class="ic" data-c="bunny" data-s="32"></span><span class="t">LEARN</span><span class="h">♡</span></button>
+    <button class="pill p3" onclick="go('Levels')"><span class="ic" data-c="bear" data-s="32"></span><span class="t">LEADERBOARD</span><span class="h">♡</span></button>
+    <button class="pill p1" onclick="go('Rewards')"><span class="ic" data-c="chick" data-s="32"></span><span class="t">MY HISTORY</span><span class="h">♡</span></button>
+    <button class="pill p2" onclick="logout()"><span class="ic" data-c="cool" data-s="32"></span><span class="t">LOGOUT</span><span class="h">♡</span></button>
+  </div>
+
+  <!-- QUIZ -->
+  <div id="quiz" class="screen hidden">
+    <div class="win">
+      <div class="bar"><span id="qRibbon">♡ level 1</span><b class="x" onclick="quitQuiz()">x</b></div>
+      <div class="body">
+        <div class="timer">TIME <span id="time">15</span>s</div>
+        <div id="qProg" class="small"></div>
+        <div class="dots" id="qDots"></div>
+        <h2 id="qText"></h2>
+        <div id="opts"></div>
+        <div class="bubble" id="qMsg">Best of luck! ♡</div>
+        <div data-c="cat" data-s="44"></div>
+      </div>
+    </div>
+  </div>
+
+  <!-- RESULT -->
+  <div id="result" class="screen hidden">
+    <div class="win">
+      <div class="bar"><span>♡ result.exe</span><b class="x" onclick="show('home')">x</b></div>
+      <div class="body">
+        <div id="rEmoji" style="margin:10px 0"></div>
+        <h2 id="rText"></h2>
+        <button class="pill p1" onclick="startQuiz()"><span class="ic" data-c="bear" data-s="32"></span><span class="t">PLAY AGAIN</span><span class="h">♡</span></button>
+        <button class="pill p2" onclick="show('home')"><span class="ic" data-c="chick" data-s="32"></span><span class="t">HOME</span><span class="h">♡</span></button>
+      </div>
+    </div>
+  </div>
+
+  <!-- ADMIN -->
+  <div id="admin" class="screen hidden">
+    <div class="win">
+      <div class="bar"><span>♡ admin.exe</span><b class="x" onclick="logout()">x</b></div>
+      <div class="body">
+        <h2>ADD QUESTION</h2>
+        <input class="in" id="aq" placeholder="Question">
+        <input class="in" id="ao0" placeholder="Option 1">
+        <input class="in" id="ao1" placeholder="Option 2">
+        <input class="in" id="ao2" placeholder="Option 3">
+        <input class="in" id="ao3" placeholder="Option 4">
+        <select class="in" id="ac">
+          <option value="0">Correct: Option 1</option>
+          <option value="1">Correct: Option 2</option>
+          <option value="2">Correct: Option 3</option>
+          <option value="3">Correct: Option 4</option>
+        </select>
+        <button class="pill p1" onclick="addQuestion()"><span class="ic" data-c="cat" data-s="32"></span><span class="t">ADD</span><span class="h">♡</span></button>
+        <div id="aMsg"></div>
+      </div>
+    </div>
+    <div class="win">
+      <div class="bar"><span>♡ all questions</span><b class="x">x</b></div>
+      <div class="body"><div id="qList"></div></div>
+    </div>
+    <button class="pill p2" onclick="logout()"><span class="ic" data-c="cool" data-s="32"></span><span class="t">LOGOUT</span><span class="h">♡</span></button>
+  </div>
+
+  <!-- LEADERBOARD / HISTORY -->
+  <div id="board" class="screen hidden">
+    <div class="win">
+      <div class="bar"><span id="bTitle"></span><b class="x" onclick="show('home')">x</b></div>
+      <div class="body">
+        <div id="bList"></div>
+        <button class="pill p3" onclick="show('home')"><span class="ic" data-c="bunny" data-s="32"></span><span class="t">BACK</span><span class="h">♡</span></button>
+      </div>
+    </div>
+  </div>
+
+</div>
+
+<div class="toast" id="toast"></div>
+
+<script>
+/* ---------- Cartoon characters (SVG) ---------- */
+var S = 'stroke="#6a5a9a" stroke-width="3"';
+
+function eyes(y)
+{
+  return '<circle cx="22" cy="' + y + '" r="3" fill="#6a5a9a"/>' +
+         '<circle cx="42" cy="' + y + '" r="3" fill="#6a5a9a"/>';
+}
+
+function cheeks(y)
+{
+  return '<ellipse cx="14" cy="' + y + '" rx="4.5" ry="3" fill="#ffb3c9"/>' +
+         '<ellipse cx="50" cy="' + y + '" rx="4.5" ry="3" fill="#ffb3c9"/>';
+}
+
+function smile(y)
+{
+  return '<path d="M28 ' + y + ' Q32 ' + (y + 4) + ' 36 ' + y + '" fill="none" ' + S + ' stroke-width="2.5"/>';
+}
+
+var CH = {};
+
+CH.cat =
+  '<polygon points="10,26 12,6 28,16" fill="#fff7ee" ' + S + '/>' +
+  '<polygon points="54,26 52,6 36,16" fill="#fff7ee" ' + S + '/>' +
+  '<polygon points="14,21 15,11 22,16" fill="#ffb3c9"/>' +
+  '<polygon points="50,21 49,11 42,16" fill="#ffb3c9"/>' +
+  '<ellipse cx="32" cy="38" rx="24" ry="20" fill="#fff7ee" ' + S + '/>' +
+  eyes(36) + cheeks(43) +
+  '<circle cx="32" cy="40" r="1.8" fill="#ff8fb8"/>' + smile(43);
+
+CH.cool =
+  CH.cat +
+  '<rect x="13" y="30" width="16" height="11" rx="4" fill="#cdb8ff" ' + S + '/>' +
+  '<rect x="35" y="30" width="16" height="11" rx="4" fill="#cdb8ff" ' + S + '/>' +
+  '<line x1="29" y1="35" x2="35" y2="35" ' + S + '/>';
+
+CH.bunny =
+  '<ellipse cx="22" cy="16" rx="7" ry="14" fill="#fff" ' + S + '/>' +
+  '<ellipse cx="42" cy="16" rx="7" ry="14" fill="#fff" ' + S + '/>' +
+  '<ellipse cx="22" cy="17" rx="3" ry="9" fill="#ffc2d6"/>' +
+  '<ellipse cx="42" cy="17" rx="3" ry="9" fill="#ffc2d6"/>' +
+  '<ellipse cx="32" cy="42" rx="22" ry="18" fill="#fff" ' + S + '/>' +
+  eyes(40) + cheeks(47) +
+  '<circle cx="32" cy="44" r="1.8" fill="#ff8fb8"/>' + smile(47);
+
+CH.bear =
+  '<circle cx="14" cy="18" r="9" fill="#d9a77a" ' + S + '/>' +
+  '<circle cx="50" cy="18" r="9" fill="#d9a77a" ' + S + '/>' +
+  '<circle cx="14" cy="18" r="4" fill="#f3cfae"/>' +
+  '<circle cx="50" cy="18" r="4" fill="#f3cfae"/>' +
+  '<circle cx="32" cy="38" r="22" fill="#d9a77a" ' + S + '/>' +
+  eyes(34) + cheeks(42) +
+  '<ellipse cx="32" cy="45" rx="10" ry="7" fill="#f3cfae"/>' +
+  '<ellipse cx="32" cy="42" rx="3.2" ry="2.2" fill="#6a5a9a"/>' +
+  '<path d="M32 44 V47 M28 48 Q32 51 36 48" fill="none" ' + S + ' stroke-width="2"/>';
+
+CH.chick =
+  '<path d="M27 16 Q32 3 37 16" fill="none" ' + S + '/>' +
+  '<circle cx="32" cy="38" r="22" fill="#ffe27a" ' + S + '/>' +
+  eyes(35) + cheeks(42) +
+  '<polygon points="28,40 36,40 32,46" fill="#ffa94d" ' + S + ' stroke-width="2"/>';
+
+CH.cloud =
+  '<path d="M14 46 Q4 46 6 36 Q8 26 20 28 Q24 14 38 18 Q50 20 50 30 Q62 32 58 42 Q56 48 48 46 Z" fill="#fff" ' + S + '/>';
+
+CH.heart =
+  '<path d="M32 56 C10 40 6 24 18 16 C25 12 31 16 32 22 C33 16 39 12 46 16 C58 24 54 40 32 56 Z" fill="#ff9ec4" ' + S + '/>';
+
+CH.star =
+  '<polygon points="32,6 39,24 58,25 43,37 48,56 32,45 16,56 21,37 6,25 25,24" fill="#ffe27a" ' + S + '/>';
+
+function svg(name, size)
+{
+  return '<svg viewBox="0 0 64 64" width="' + size + '" height="' + size +
+         '" stroke-linejoin="round" stroke-linecap="round">' + CH[name] + '</svg>';
+}
+
+function fillChars()
+{
+  var list = document.querySelectorAll('[data-c]');
+
+  for (var i = 0; i < list.length; i++)
+  {
+    list[i].innerHTML = svg(list[i].getAttribute('data-c'), list[i].getAttribute('data-s'));
+  }
+}
+
+/* ---------- Variables ---------- */
+var qs = [], idx = 0, score = 0, left = 15;
+var timerId = null, locked = false, active = false;
+
+var defaultQs = [
+  { q: '8 x 7 = ?', o: ['54', '56', '58', '64'], a: 1 },
+  { q: '15 + 27 = ?', o: ['41', '42', '43', '44'], a: 1 },
+  { q: '100 - 37 = ?', o: ['63', '67', '73', '57'], a: 0 },
+  { q: 'What is the square root of 81?', o: ['7', '8', '9', '10'], a: 2 },
+  { q: '12 x 12 = ?', o: ['124', '132', '144', '154'], a: 2 },
+  { q: 'Which of these is a prime number?', o: ['9', '15', '17', '21'], a: 2 },
+  { q: 'What is 3 x 3 x 3?', o: ['6', '9', '27', '81'], a: 2 },
+  { q: 'What is 5 in binary?', o: ['100', '101', '110', '111'], a: 1 },
+  { q: 'What is the capital of India?', o: ['Mumbai', 'Delhi', 'Kolkata', 'Chennai'], a: 1 },
+  { q: 'What is the national flower of India?', o: ['Rose', 'Lotus', 'Lily', 'Sunflower'], a: 1 },
+  { q: 'What is the full form of HTML?', o: ['Hyper Text Markup Language', 'High Text Machine Language', 'Hyper Tool Multi Language', 'Home Text Markup Language'], a: 0 },
+  { q: 'What is the full form of CPU?', o: ['Central Process Unit', 'Central Processing Unit', 'Computer Personal Unit', 'Central Program Unit'], a: 1 },
+  { q: 'What is the full form of RAM?', o: ['Read Access Memory', 'Random Access Memory', 'Run Auto Memory', 'Rapid Access Moment'], a: 1 },
+  { q: 'Which of these is an input device?', o: ['Monitor', 'Printer', 'Keyboard', 'Speaker'], a: 2 },
+  { q: 'Who created the C language?', o: ['Dennis Ritchie', 'James Gosling', 'Guido van Rossum', 'Bjarne Stroustrup'], a: 0 },
+  { q: 'How many bits are in 1 byte?', o: ['4', '8', '16', '32'], a: 1 },
+  { q: 'Which of these is a loop in C?', o: ['if', 'switch', 'for', 'goto'], a: 2 },
+  { q: 'Which symbol starts a single-line comment in C?', o: ['//', '##', '<>', '**'], a: 0 },
+  { q: 'Which of these is database software?', o: ['MySQL', 'Chrome', 'VLC', 'Paint'], a: 0 },
+  { q: 'What is CSS used for?', o: ['Styling web pages', 'Creating databases', 'Removing viruses', 'Editing photos'], a: 0 }
+];
+
+/* ---------- Storage helpers ---------- */
+function getUsers()
+{
+  try { return JSON.parse(localStorage.getItem('users')) || []; }
+  catch (e) { return []; }
+}
+
+function saveUsers(list)
+{
+  localStorage.setItem('users', JSON.stringify(list));
+}
+
+function getQuestions()
+{
+  try
+  {
+    var list = JSON.parse(localStorage.getItem('questions'));
+
+    if (list && list.length && localStorage.getItem('qver') === '3')
+    {
+      return list;
+    }
+  }
+  catch (e) {}
+
+  localStorage.setItem('questions', JSON.stringify(defaultQs));
+  localStorage.setItem('qver', '3');
+  return defaultQs;
+}
+
+function saveQuestions(list)
+{
+  localStorage.setItem('questions', JSON.stringify(list));
+}
+
+function currentUser()
+{
+  try { return JSON.parse(localStorage.getItem('current')); }
+  catch (e) { return null; }
+}
+
+/* ---------- Default admin ---------- */
+(function ()
+{
+  var list = getUsers();
+  var hasAdmin = list.some(function (u) { return u.name === 'admin'; });
+
+  if (!hasAdmin)
+  {
+    list.push({ name: 'admin', pass: 'admin123', role: 'admin' });
+    saveUsers(list);
+  }
+})();
+
+/* ---------- Screens ---------- */
+function show(id)
+{
+  ['auth', 'home', 'quiz', 'result', 'admin', 'board'].forEach(function (s)
+  {
+    document.getElementById(s).classList.toggle('hidden', s !== id);
+  });
+
+  if (id === 'home')
+  {
+    updateStars();
+  }
+
+  window.scrollTo(0, 0);
+}
+
+function toast(text)
+{
+  var t = document.getElementById('toast');
+  t.textContent = text;
+  t.style.display = 'block';
+  setTimeout(function () { t.style.display = 'none'; }, 1800);
+}
+
+/* ---------- Login / Register ---------- */
+function say(text, good)
+{
+  var box = document.getElementById('authMsg');
+  box.textContent = text;
+  box.style.color = good ? '#2e8b2e' : '#d9406a';
+}
+
+function register()
+{
+  var name = document.getElementById('user').value.trim();
+  var pass = document.getElementById('pass').value;
+  var list = getUsers();
+
+  if (name === '' || pass === '')
+  {
+    say('Please enter a username and password', false);
+    return;
+  }
+
+  if (list.some(function (u) { return u.name === name; }))
+  {
+    say('That username already exists!', false);
+    return;
+  }
+
+  list.push({ name: name, pass: pass, role: 'student' });
+  saveUsers(list);
+  say('Registered! You can login now ♡', true);
+}
+
+function login()
+{
+  var name = document.getElementById('user').value.trim();
+  var pass = document.getElementById('pass').value;
+  var found = getUsers().find(function (u)
+  {
+    return u.name === name && u.pass === pass;
+  });
+
+  if (!found)
+  {
+    say('Wrong username or password', false);
+    return;
+  }
+
+  localStorage.setItem('current', JSON.stringify(found));
+  enterHome();
+}
+
+function enterHome()
+{
+  var me = currentUser();
+
+  if (!me)
+  {
+    show('auth');
+    return;
+  }
+
+  if (me.role === 'admin')
+  {
+    renderAdmin();
+    show('admin');
+    return;
+  }
+
+  document.getElementById('hName').textContent = 'HI, ' + me.name.toUpperCase() + '!';
+  show('home');
+}
+
+function logout()
+{
+  clearInterval(timerId);
+  active = false;
+  localStorage.removeItem('current');
+  document.getElementById('pass').value = '';
+  say('', true);
+  show('auth');
+}
+
+/* ---------- Home buttons ---------- */
+function go(page)
+{
+  if (page === 'Start')
+  {
+    startQuiz();
+  }
+  else if (page === 'Levels')
+  {
+    showBoard('leaderboard');
+  }
+  else if (page === 'Rewards')
+  {
+    showBoard('history');
+  }
+  else
+  {
+    toast(page + ' coming soon! ♡');
+  }
+}
+
+/* ---------- Stars ---------- */
+function updateStars()
+{
+  var me = currentUser();
+  if (!me) { return; }
+  var stars = parseInt(localStorage.getItem('stars_' + me.name), 10) || 0;
+  document.getElementById('stars').textContent = stars;
+}
+
+function addStars(n)
+{
+  var me = currentUser();
+  if (!me) { return; }
+  var key = 'stars_' + me.name;
+  var stars = parseInt(localStorage.getItem(key), 10) || 0;
+  localStorage.setItem(key, stars + n);
+}
+
+/* ---------- Progress hearts ---------- */
+function drawDots(boxId, total, current)
+{
+  var box = document.getElementById(boxId);
+  box.innerHTML = '';
+
+  for (var i = 0; i < total; i++)
+  {
+    var d = document.createElement('span');
+    d.textContent = (i < current) ? '♥' : (i === current ? '★' : '♡');
+    box.appendChild(d);
+  }
+}
+
+/* ---------- Quiz ---------- */
+function startQuiz()
+{
+  qs = getQuestions().slice().sort(function () { return Math.random() - 0.5; }).slice(0, 10);
+  idx = 0;
+  score = 0;
+  active = true;
+  show('quiz');
+  showQuestion();
+}
+
+function showQuestion()
+{
+  var q = qs[idx];
+  var box = document.getElementById('opts');
+  var letters = ['A', 'B', 'C', 'D'];
+
+  locked = false;
+  document.getElementById('qRibbon').textContent = '♡ level ' + (idx + 1);
+  drawDots('qDots', qs.length, idx);
+  document.getElementById('qProg').textContent = 'Question ' + (idx + 1) + ' / ' + qs.length;
+  document.getElementById('qText').textContent = q.q;
+  document.getElementById('qMsg').textContent = 'Best of luck! ♡';
+  box.innerHTML = '';
+
+  q.o.forEach(function (text, i)
+  {
+    var b = document.createElement('button');
+    b.className = 'pill opt p' + ((i % 3) + 1);
+
+    var l = document.createElement('span');
+    l.className = 'ic';
+    l.textContent = letters[i];
+
+    var t = document.createElement('span');
+    t.className = 't';
+    t.textContent = text;
+
+    b.appendChild(l);
+    b.appendChild(t);
+    b.onclick = function () { pick(i); };
+    box.appendChild(b);
+  });
+
+  left = 15;
+  document.getElementById('time').textContent = left;
+  clearInterval(timerId);
+  timerId = setInterval(function ()
+  {
+    left--;
+    document.getElementById('time').textContent = left;
+    if (left <= 0) { pick(-1); }
+  }, 1000);
+}
+
+function pick(i)
+{
+  if (locked) { return; }
+  locked = true;
+  clearInterval(timerId);
+
+  var q = qs[idx];
+  var btns = document.querySelectorAll('.opt');
+
+  btns[q.a].classList.add('right');
+
+  if (i === q.a)
+  {
+    score++;
+    addStars(10);
+    beep(true);
+    document.getElementById('qMsg').textContent = 'Yay! Correct! ♥';
+  }
+  else
+  {
+    beep(false);
+    if (i >= 0) { btns[i].classList.add('wrong'); }
+    document.getElementById('qMsg').textContent =
+      (i < 0) ? 'Time is up!' : 'Oops! Try the next one!';
+  }
+
+  setTimeout(function ()
+  {
+    if (!active) { return; }
+    idx++;
+    if (idx < qs.length) { showQuestion(); }
+    else { finishQuiz(); }
+  }, 1300);
+}
+
+function quitQuiz()
+{
+  clearInterval(timerId);
+  active = false;
+  show('home');
+}
+
+function finishQuiz()
+{
+  active = false;
+
+  var me = currentUser();
+  var results = [];
+
+  try { results = JSON.parse(localStorage.getItem('results')) || []; }
+  catch (e) { results = []; }
+
+  results.push({ name: me.name, score: score, total: qs.length });
+  localStorage.setItem('results', JSON.stringify(results));
+
+  document.getElementById('rEmoji').innerHTML =
+    svg(score === qs.length ? 'cool' : 'bunny', 100);
+  document.getElementById('rText').textContent =
+    me.name + ', your score: ' + score + ' / ' + qs.length;
+
+  if (score === qs.length) { winTune(); }
+  show('result');
+}
+
+/* ---------- Admin ---------- */
+function addQuestion()
+{
+  var q = document.getElementById('aq').value.trim();
+  var o = [0, 1, 2, 3].map(function (i)
+  {
+    return document.getElementById('ao' + i).value.trim();
+  });
+  var a = parseInt(document.getElementById('ac').value, 10);
+  var box = document.getElementById('aMsg');
+
+  if (q === '' || o.indexOf('') !== -1)
+  {
+    box.textContent = 'Please fill in all fields';
+    return;
+  }
+
+  var list = getQuestions();
+  list.push({ q: q, o: o, a: a });
+  saveQuestions(list);
+
+  document.getElementById('aq').value = '';
+  [0, 1, 2, 3].forEach(function (i)
+  {
+    document.getElementById('ao' + i).value = '';
+  });
+
+  box.textContent = 'Question added! ♥';
+  renderAdmin();
+}
+
+function deleteQuestion(i)
+{
+  var list = getQuestions();
+
+  if (list.length <= 1)
+  {
+    document.getElementById('aMsg').textContent = 'Keep at least 1 question';
+    return;
+  }
+
+  list.splice(i, 1);
+  saveQuestions(list);
+  renderAdmin();
+}
+
+function renderAdmin()
+{
+  var box = document.getElementById('qList');
+  box.innerHTML = '';
+
+  getQuestions().forEach(function (item, i)
+  {
+    var row = document.createElement('div');
+    row.className = 'row';
+
+    var span = document.createElement('span');
+    span.textContent = (i + 1) + '. ' + item.q;
+
+    var btn = document.createElement('button');
+    btn.className = 'del';
+    btn.textContent = 'DEL';
+    btn.onclick = function () { deleteQuestion(i); };
+
+    row.appendChild(span);
+    row.appendChild(btn);
+    box.appendChild(row);
+  });
+}
+
+/* ---------- Leaderboard / History ---------- */
+function showBoard(type)
+{
+  var me = currentUser();
+  var all = [];
+  var rows;
+
+  try { all = JSON.parse(localStorage.getItem('results')) || []; }
+  catch (e) { all = []; }
+
+  if (type === 'leaderboard')
+  {
+    document.getElementById('bTitle').textContent = '♡ leaderboard (top 5)';
+    rows = all.slice().sort(function (a, b)
+    {
+      return b.score - a.score;
+    }).slice(0, 5);
+  }
+  else
+  {
+    document.getElementById('bTitle').textContent = '♡ my history';
+    rows = all.filter(function (r)
+    {
+      return r.name === me.name;
+    }).reverse();
+  }
+
+  var box = document.getElementById('bList');
+  box.innerHTML = '';
+
+  if (rows.length === 0)
+  {
+    box.textContent = 'No results yet ♡';
+  }
+
+  rows.forEach(function (r, i)
+  {
+    var row = document.createElement('div');
+    row.className = 'row';
+    row.textContent = (type === 'leaderboard' ? (i + 1) + '. ' + r.name + ' - ' : '') +
+                      r.score + ' / ' + r.total;
+    box.appendChild(row);
+  });
+
+  show('board');
+}
+
+/* ---------- Cute sounds ---------- */
+var audioCtx = null;
+
+function tone(freq, start, dur, type, vol)
+{
+  try
+  {
+    if (!audioCtx)
+    {
+      audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+    }
+
+    var osc = audioCtx.createOscillator();
+    var gain = audioCtx.createGain();
+    var t0 = audioCtx.currentTime + start;
+
+    osc.type = type;
+    osc.frequency.setValueAtTime(freq, t0);
+    gain.gain.setValueAtTime(0.0001, t0);
+    gain.gain.exponentialRampToValueAtTime(vol, t0 + 0.02);
+    gain.gain.exponentialRampToValueAtTime(0.0001, t0 + dur);
+    osc.connect(gain);
+    gain.connect(audioCtx.destination);
+    osc.start(t0);
+    osc.stop(t0 + dur + 0.05);
+  }
+  catch (e) {}
+}
+
+function beep(good)
+{
+  if (good)
+  {
+    tone(784, 0, 0.18, 'sine', 0.22);
+    tone(988, 0.1, 0.18, 'sine', 0.22);
+    tone(1319, 0.2, 0.35, 'sine', 0.22);
+  }
+  else
+  {
+    tone(330, 0, 0.18, 'triangle', 0.2);
+    tone(262, 0.14, 0.3, 'triangle', 0.2);
+  }
+}
+
+function winTune()
+{
+  var notes = [523, 659, 784, 1047, 784, 1047];
+
+  for (var i = 0; i < notes.length; i++)
+  {
+    tone(notes[i], i * 0.13, 0.25, 'sine', 0.22);
+  }
+}
+
+document.addEventListener('click', function (e)
+{
+  var pill = e.target.closest ? e.target.closest('.pill') : null;
+
+  if (pill && !pill.classList.contains('opt'))
+  {
+    tone(880, 0, 0.08, 'sine', 0.14);
+  }
+});
+
+/* ---------- Start ---------- */
+fillChars();
+
+if (currentUser())
+{
+  enterHome();
+}
+</script>
+</body>
+</html>
